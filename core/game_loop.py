@@ -1,0 +1,92 @@
+"""Главный игровой цикл.
+Объединяет состояние игры, обработку событий и отрисовку.
+"""
+
+import pygame
+import logging
+
+from core.game_state import GameState
+from core.event_handler import EventHandler
+from ui import Renderer, BalanceDisplay
+from config import WINDOW_WIDTH, WINDOW_HEIGHT, TOOLBAR_WIDTH
+
+TIMER_EVENT = pygame.USEREVENT + 1
+BG_COLOR = (0, 33, 55)  # глубокий синий для фона
+
+
+class GameLoop:
+    """Главный игровой цикл с фазами handle_events, update, render.
+
+    Attributes:
+        screen: Поверхность для отрисовки.
+        game_state: Состояние игры.
+        event_handler: Обработчик событий.
+    """
+
+    def __init__(self, screen: pygame.Surface) -> None:
+        self._screen: pygame.Surface = screen
+        self._game_state: GameState = GameState()
+        self._balance_display: BalanceDisplay = BalanceDisplay()
+        self._event_handler: EventHandler = EventHandler(
+            self._game_state, self._balance_display
+        )
+        self._running: bool = True
+
+        pygame.time.set_timer(TIMER_EVENT, 1000)
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[logging.StreamHandler()],
+        )
+
+    @property
+    def game_state(self) -> GameState:
+        """Состояние игры."""
+        return self._game_state
+
+    def run(self) -> None:
+        """Запускает главный игровой цикл."""
+        while self._running:
+            self._handle_events()
+            self._render()
+            pygame.display.update()
+
+        pygame.quit()
+
+    def _handle_events(self) -> None:
+        """Обрабатывает все события pygame."""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self._running = False
+            else:
+                self._event_handler.handle_event(event)
+
+        cursor_type = self._event_handler.get_cursor_type()
+        pygame.mouse.set_cursor(cursor_type)
+
+    def _render(self) -> None:
+        """Отрисовывает всё на экране."""
+        screen = self._screen
+        camera = self._game_state.camera
+        nodes = self._game_state.nodes
+        traversers = self._game_state.traverser_manager.traversers
+
+        screen.fill(BG_COLOR)
+
+        Renderer.draw_edges(screen, nodes, camera)
+        Renderer.draw_traverser_paths(screen, traversers, camera)
+        Renderer.draw_all_nodes(screen, nodes, camera)
+        Renderer.draw_traverser_nodes(screen, traversers, camera)
+
+        toolbar = self._game_state.toolbar
+        toolbar.update(screen)
+        toolbar.draw(screen, self._game_state.balance.balance)
+        self._balance_display.draw(screen, self._game_state.balance)
+
+        traverser_shop = self._game_state.traverser_shop
+        traverser_shop.draw(
+            screen,
+            self._game_state.traverser_manager,
+            self._game_state.balance,
+        )
