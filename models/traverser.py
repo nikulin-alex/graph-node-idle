@@ -172,14 +172,14 @@ class Traverser:
     def _plan_bfs_move(self):
         """Планирует перемещение к следующему узлу согласно BFS."""
         if self._waiting:
-            return
+            return None
 
         if not self._queue:
             if len(self._visited) > 1:
                 self._finish_cycle()
             else:
                 self._waiting = True
-            return
+            return None
 
         target = None
         while self._queue and target is None:
@@ -192,7 +192,7 @@ class Traverser:
                 self._finish_cycle()
             else:
                 self._waiting = True
-            return
+            return None
 
         path = self._find_shortest_path(self._current_node, target)
         if path and len(path) > 1:

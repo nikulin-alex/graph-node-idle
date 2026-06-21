@@ -45,11 +45,7 @@ class EventHandler:
         Args:
             event: Событие pygame.
         """
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
-
-        elif event.type == pygame.USEREVENT + 1:
+        if event.type == pygame.USEREVENT + 1:
             self._game_state.update()
 
         elif event.type == pygame.MOUSEWHEEL:

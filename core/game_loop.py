@@ -7,11 +7,12 @@ import logging
 
 from core.game_state import GameState
 from core.event_handler import EventHandler
+from core.save_load import save_game, load_game
 from ui import Renderer, BalanceDisplay
 from config import WINDOW_WIDTH, WINDOW_HEIGHT, TOOLBAR_WIDTH
 
 TIMER_EVENT = pygame.USEREVENT + 1
-BG_COLOR = (0, 33, 55)  # глубокий синий для фона
+BG_COLOR = (0, 33, 55)
 
 
 class GameLoop:
@@ -40,6 +41,8 @@ class GameLoop:
             handlers=[logging.StreamHandler()],
         )
 
+        load_game(self._game_state)
+
     @property
     def game_state(self) -> GameState:
         """Состояние игры."""
@@ -58,6 +61,7 @@ class GameLoop:
         """Обрабатывает все события pygame."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game(self._game_state)
                 self._running = False
             else:
                 self._event_handler.handle_event(event)
