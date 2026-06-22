@@ -1,6 +1,6 @@
 """
 Сохранение и загрузка состояния игры в JSON.
-Сериализует баланс, список узлов и обходчиков.
+Сериализует баланс, список узлов, обходчиков и настройки звука.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from core.game_state import GameState
+
+from config.constants import SAVE_KEY_MUSIC_VOLUME, SAVE_KEY_SFX_VOLUME
 
 SAVE_DIR = Path("saves")
 SAVE_FILE = SAVE_DIR / "progress.json"
@@ -80,6 +82,8 @@ def save_game(game_state: GameState) -> None:
         "balance": game_state.balance.balance,
         "nodes": _serialize_nodes(game_state),
         "traversers": _serialize_traversers(game_state),
+        SAVE_KEY_MUSIC_VOLUME: game_state.sound_manager.music_volume,
+        SAVE_KEY_SFX_VOLUME: game_state.sound_manager.sound_volume,
     }
 
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -167,6 +171,16 @@ def load_game(game_state: GameState) -> bool:
         game_state.balance._balance = data["balance"]
 
         _restore_traversers(game_state, data["traversers"])
+
+        # Восстановление громкости звука
+        sound_manager = game_state.sound_manager
+        if sound_manager is not None:
+            music_volume = data.get(SAVE_KEY_MUSIC_VOLUME)
+            sfx_volume = data.get(SAVE_KEY_SFX_VOLUME)
+            if music_volume is not None:
+                sound_manager.music_volume = music_volume
+            if sfx_volume is not None:
+                sound_manager.sound_volume = sfx_volume
 
         if game_state.nodes:
             game_state.traverser_manager._start_node = game_state.nodes[0]

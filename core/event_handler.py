@@ -68,10 +68,15 @@ class EventHandler:
             self._game_state.update()
 
         elif event.type == pygame.MOUSEWHEEL:
-            if event.y > 0:
-                self._game_state.camera.zoom_in()
-            elif event.y < 0:
-                self._game_state.camera.zoom_out()
+            # Если открыта панель с мануалом — скроллим контент
+            if self._game_state.left_panel.is_open and self._game_state.left_panel.handle_mouse_wheel(event.y):
+                pass  # скролл обработан панелью
+            else:
+                # Иначе — зум камеры
+                if event.y > 0:
+                    self._game_state.camera.zoom_in()
+                elif event.y < 0:
+                    self._game_state.camera.zoom_out()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._handle_mouse_down(event)
@@ -215,6 +220,11 @@ class EventHandler:
 
     def _handle_mouse_motion(self, event: pygame.event.Event) -> None:
         """Обрабатывает движение мыши."""
+        # Перетаскивание ползунков в левой панели
+        left_panel = self._game_state.left_panel
+        if left_panel.is_open:
+            left_panel.handle_mouse_motion(pygame.mouse.get_pos())
+
         if self._group_dragging and self._selected_nodes:
             current_pos = pygame.mouse.get_pos()
             world_pos = self._game_state.camera.unapply(current_pos)
@@ -235,6 +245,11 @@ class EventHandler:
 
     def _handle_mouse_up(self, event: pygame.event.Event) -> None:
         """Обрабатывает отпускание кнопки мыши."""
+        # Завершение перетаскивания ползунков в левой панели
+        left_panel = self._game_state.left_panel
+        if left_panel.is_open:
+            left_panel.handle_mouse_up()
+
         if self._group_dragging:
             self._group_dragging = False
             self._group_drag_offsets = []

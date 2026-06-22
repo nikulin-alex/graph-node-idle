@@ -25,6 +25,7 @@ class GameState:
     """
 
     def __init__(self, sound_manager: Optional[SoundManager] = None) -> None:
+        self._sound_manager: Optional[SoundManager] = sound_manager
         start_node: GraphNode = GraphNode((100, 100))
         self._nodes: list[GraphNode] = [start_node]
         self._balance: Balance = Balance(initial_balance=INITIAL_BALANCE)
@@ -67,6 +68,11 @@ class GameState:
     def traverser_manager(self) -> TraverserManager:
         """Менеджер обходчиков."""
         return self._traverser_manager
+
+    @property
+    def sound_manager(self) -> Optional[SoundManager]:
+        """Менеджер звуков и музыки."""
+        return self._sound_manager
 
     def update(self) -> None:
         """Обновляет состояние игры на один тик."""
