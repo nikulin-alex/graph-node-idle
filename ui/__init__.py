@@ -4,10 +4,12 @@ from ui.renderer import Renderer
 from ui.balance_display import BalanceDisplay
 from ui.toolbar import ToolBar
 from ui.traverser_shop import TraverserShop
+from ui.left_panel import LeftPanel
 
 __all__ = [
     "Renderer",
     "BalanceDisplay",
     "ToolBar",
     "TraverserShop",
+    "LeftPanel",
 ]

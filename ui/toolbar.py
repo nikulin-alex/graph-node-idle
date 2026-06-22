@@ -10,10 +10,10 @@ from typing import List, Optional
 from models import GraphNode, Balance, TraverserManager
 from ui.button import Button
 from config import (
+    FONT_PATH,
     TOOLBAR_IMG,
     TOOLBAR_WIDTH,
-    WINDOW_WIDTH,
-    BALANCE_FONT,
+    FONT_SIZE_TOOLBAR_TEXT,
     DELETE_NODE_PRICE,
 )
 from utils import (
@@ -22,6 +22,7 @@ from utils import (
     callback1,
     callback2,
     callback3,
+    SoundManager,
 )
 
 
@@ -33,16 +34,16 @@ class ToolBar:
         is_triggered: Открыта ли панель.
     """
 
-    # Координаты на спрайте тулбара
     CLOSE_BUTTON_COORDS = (135, 1755, 120, 140)
     INFO_TEXT_COORDS = (280, 1900)  # (x, y) — левый верхний угол текста
 
-    def __init__(self) -> None:
+    def __init__(self, sound_manager: SoundManager) -> None:
         self._target_node: Optional[GraphNode] = None
         self._image = get_image(image_cache, TOOLBAR_IMG)
         self._image_w: int = self._image.get_width()
         self._image_h: int = self._image.get_height()
-        self._font: pygame.font.Font = pygame.font.Font(None, BALANCE_FONT)
+        self._font: pygame.font.Font = pygame.font.Font(FONT_PATH, FONT_SIZE_TOOLBAR_TEXT)
+        self._sound_manager: SoundManager = sound_manager
 
         self._target_x: float = 0
         self._current_x: float = 0
@@ -97,7 +98,6 @@ class ToolBar:
         """Создаёт кнопки для текущего целевого узла."""
         buttons = []
 
-        # Кнопка удаления
         btn_delete_coords = (280, 2200, 1050, 250)
         btn_delete = Button(
             "Удалить узел",
@@ -108,7 +108,6 @@ class ToolBar:
         )
         buttons.append(btn_delete)
 
-        # Кнопка добавления узла
         btn1_coords = (280, 2500, 1050, 450)
         btn1 = Button(
             "Добавить узел",
@@ -122,7 +121,6 @@ class ToolBar:
         )
         buttons.append(btn1)
 
-        # Кнопка улучшения узла
         btn2_coords = (280, 2950, 1050, 450)
         btn2 = Button(
             "Улучшить узел",
@@ -144,6 +142,7 @@ class ToolBar:
             node: Выбранный узел.
             screen: Поверхность для расчёта размеров.
         """
+        self._sound_manager.play_close_toolbar()
         if self._target_node is node:
             self._target_node.selected = False
             self._target_node = None
@@ -185,31 +184,29 @@ class ToolBar:
             screen: Поверхность для отрисовки.
             balance: Текущий баланс для определения доступности кнопок.
         """
-        if self._target_node is None:
-            return None
 
         self._update_bg_rect(screen)
         scaled_bg = self._get_scaled_bg(screen)
         screen.blit(scaled_bg, self._bg_rect)
+        if self._target_node is not None:
+            node = self._target_node
+            info_lines = [
+                f"Узел (уровень {node.level})",
+                f"Доход: {node.get_income()}/с",
+            ]
+            scale_x = self._bg_rect.width / self._image_w
+            scale_y = self._bg_rect.height / self._image_h
+            text_x = self._bg_rect.left + self.INFO_TEXT_COORDS[0] * scale_x
+            text_y = self._bg_rect.top + self.INFO_TEXT_COORDS[1] * scale_y
+            for line in info_lines:
+                text_surface = self._font.render(line, True, (255, 255, 255))
+                text_rect = text_surface.get_rect()
+                text_rect.topleft = (text_x, text_y)
+                screen.blit(text_surface, text_rect)
+                text_y += 35
 
-        node = self._target_node
-        info_lines = [
-            f"Узел (уровень {node.level})",
-            f"Доход: {node.get_income()}/с",
-        ]
-        scale_x = self._bg_rect.width / self._image_w
-        scale_y = self._bg_rect.height / self._image_h
-        text_x = self._bg_rect.left + self.INFO_TEXT_COORDS[0] * scale_x
-        text_y = self._bg_rect.top + self.INFO_TEXT_COORDS[1] * scale_y
-        for line in info_lines:
-            text_surface = self._font.render(line, True, (255, 255, 255))
-            text_rect = text_surface.get_rect()
-            text_rect.topleft = (text_x, text_y)
-            screen.blit(text_surface, text_rect)
-            text_y += 35
-
-        for btn in self._buttons:
-            btn.draw(screen, self._bg_rect, balance, self._image_w, self._image_h)
+            for btn in self._buttons:
+                btn.draw(screen, self._bg_rect, balance, self._image_w, self._image_h)
 
     def handle_click(self, mouse_pos: tuple, screen: pygame.Surface) -> bool:
         """Обрабатывает клик по кнопке закрытия.
@@ -233,10 +230,10 @@ class ToolBar:
         close_rect = pygame.Rect(close_x, close_y, close_w, close_h)
 
         if close_rect.collidepoint(mouse_pos):
+            self._sound_manager.play_close_toolbar()
             self._target_node.selected = False
             self._target_node = None
             self._is_triggered = False
-            self._target_x = screen.get_width() + TOOLBAR_WIDTH
             return True
         return False
 
@@ -274,6 +271,7 @@ class ToolBar:
                 self._image_h,
                 traverser_manager=traverser_manager,
                 toolbar=self,
+                sound_manager=self._sound_manager,
             )
             if result is not None:
                 if isinstance(result, GraphNode) and result not in nodes:

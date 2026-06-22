@@ -5,9 +5,12 @@ from typing import Callable, Optional
 
 from models import GraphNode
 from config import (
+    FONT_PATH,
     UPGRADE_BTN_IMG,
     UPGRADE_BTN_DISABLED_IMG,
     MAX_UPGRADED_BTN_IMG,
+    FONT_SIZE_TOOLBAR_BTN,
+    FONT_SIZE_TOOLBAR_BTN_SIMPLE,
 )
 from utils import format_number, get_image, image_cache
 
@@ -33,7 +36,7 @@ class Button:
     ) -> None:
         self._text: str = text
         self._text_func: Optional[Callable] = text_func
-        self._font: pygame.font.Font = pygame.font.Font(None, 20 if simple else 24)
+        self._font: pygame.font.Font = pygame.font.Font(FONT_PATH, FONT_SIZE_TOOLBAR_BTN_SIMPLE if simple else FONT_SIZE_TOOLBAR_BTN)
         self._rect: Optional[pygame.Rect] = None
         self._sprite_rect: Optional[pygame.Rect] = None
         self._coords_list: tuple = coords_list
@@ -131,13 +134,16 @@ class Button:
         Returns:
             Результат коллбэка или None.
         """
-        if self._state in ("disabled", "max"):
-            return None
-
         if event.type == pygame.MOUSEBUTTONDOWN:
             self.update_rect(bg_rect, toolbar_image_w, toolbar_image_h)
             target_rect = self._rect if self._simple else self._sprite_rect
             if target_rect and target_rect.collidepoint(event.pos):
+                if self._state in ("disabled", "max"):
+                    sound_manager = kwargs.get("sound_manager")
+                    if sound_manager is not None:
+                        sound_manager.play_click_error()
+                    return None
+
                 price = self._price_func()
                 result = self._callback(
                     nodes=nodes,

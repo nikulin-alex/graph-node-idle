@@ -52,7 +52,9 @@ def _serialize_traversers(game_state: GameState) -> list[dict[str, Any]]:
                 "color": list(t.color),
                 "current_node": node_to_idx.get(id(t.current_node), 0),
                 "cycles_completed": t.cycles_completed,
-                "visited": [node_to_idx[id(n)] for n in t._visited if id(n) in node_to_idx],
+                "visited": [
+                    node_to_idx[id(n)] for n in t._visited if id(n) in node_to_idx
+                ],
                 "stack": [node_to_idx[id(n)] for n in t._stack if id(n) in node_to_idx],
                 "queue": [node_to_idx[id(n)] for n in t._queue if id(n) in node_to_idx],
                 "move_queue": [
@@ -88,9 +90,8 @@ def save_game(game_state: GameState) -> None:
     except OSError as e:
         logger.error("Не удалось сохранить игру: %s", e)
 
-def _restore_nodes(
-    game_state: GameState, nodes_data: list[dict[str, Any]]
-) -> None:
+
+def _restore_nodes(game_state: GameState, nodes_data: list[dict[str, Any]]) -> None:
     """Восстанавливает узлы из данных JSON."""
     from models.graph_node import GraphNode
 

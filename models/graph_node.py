@@ -37,6 +37,10 @@ class GraphNode:
         self._connected_nodes: list[GraphNode] = list()
         self._level: int = 1
 
+    def toggle_selected(self) -> None:
+        """Переключает состояние выделения узла."""
+        self._selected = not self._selected
+
     @property
     def x(self) -> float:
         """Координата X данного узла."""

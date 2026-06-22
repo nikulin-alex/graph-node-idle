@@ -22,6 +22,7 @@ from utils.callbacks import (
     callback2,
     callback3,
 )
+from utils.sound_manager import SoundManager
 
 __all__ = [
     "collision",
@@ -40,4 +41,5 @@ __all__ = [
     "callback1",
     "callback2",
     "callback3",
+    "SoundManager",
 ]

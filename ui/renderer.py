@@ -3,6 +3,7 @@
 """
 
 import pygame
+from typing import Optional
 
 from models import GraphNode, Traverser
 from core import Camera
@@ -19,6 +20,9 @@ class Renderer:
     """
     Отвечает за отрисовку узлов графа, рёбёр, обходчиков и их путей.
     """
+
+    LINK_LINE_COLOR = (100, 255, 100)
+    """Цвет линии-подсказки при связывании узлов."""
 
     @staticmethod
     def draw_edges(screen: pygame.Surface, nodes: list, camera: Camera) -> None:
@@ -37,6 +41,40 @@ class Renderer:
                 if edge_id not in drawn_edges and reverse_id not in drawn_edges:
                     pygame.draw.line(screen, EDGE_COLOR, start, end, width=5)
                     drawn_edges.add(edge_id)
+
+    @staticmethod
+    def draw_linking_guide(
+        screen: pygame.Surface,
+        linking_node: Optional[GraphNode],
+        camera: Camera,
+    ) -> None:
+        """Отрисовывает визуальную подсказку при связывании узлов.
+
+        Если выбран первый узел — рисует линию от него к курсору мыши
+        и подсвечивает сам узел.
+
+        Args:
+            screen: Поверхность для отрисовки.
+            linking_node: Первый выбранный узел (или "pending").
+            camera: Камера для преобразования координат.
+        """
+        if linking_node is None or linking_node == "pending":
+            return None
+
+        screen_pos = camera.apply((linking_node.x, linking_node.y))
+        size = int(NODE_SIZE * camera.zoom * 0.8)
+        pygame.draw.circle(
+            screen, Renderer.LINK_LINE_COLOR, screen_pos, size, width=3
+        )
+
+        mouse_pos = pygame.mouse.get_pos()
+        pygame.draw.line(
+            screen,
+            Renderer.LINK_LINE_COLOR,
+            screen_pos,
+            mouse_pos,
+            width=2,
+        )
 
     @staticmethod
     def draw_node(screen: pygame.Surface, node: GraphNode, camera: Camera) -> None:

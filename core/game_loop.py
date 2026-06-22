@@ -10,6 +10,7 @@ from core.event_handler import EventHandler
 from core.save_load import save_game, load_game
 from ui import Renderer, BalanceDisplay
 from config import WINDOW_WIDTH, WINDOW_HEIGHT, TOOLBAR_WIDTH
+from utils import SoundManager
 
 TIMER_EVENT = pygame.USEREVENT + 1
 BG_COLOR = (0, 33, 55)
@@ -22,14 +23,16 @@ class GameLoop:
         screen: Поверхность для отрисовки.
         game_state: Состояние игры.
         event_handler: Обработчик событий.
+        sound_manager: Менеджер звуков и музыки.
     """
 
     def __init__(self, screen: pygame.Surface) -> None:
         self._screen: pygame.Surface = screen
-        self._game_state: GameState = GameState()
+        self._sound_manager: SoundManager = SoundManager()
+        self._game_state: GameState = GameState(sound_manager=self._sound_manager)
         self._balance_display: BalanceDisplay = BalanceDisplay()
         self._event_handler: EventHandler = EventHandler(
-            self._game_state, self._balance_display
+            self._game_state, self._sound_manager
         )
         self._running: bool = True
 
@@ -42,11 +45,17 @@ class GameLoop:
         )
 
         load_game(self._game_state)
+        self._sound_manager.start_music()
 
     @property
     def game_state(self) -> GameState:
         """Состояние игры."""
         return self._game_state
+
+    @property
+    def sound_manager(self) -> SoundManager:
+        """Менеджер звуков и музыки."""
+        return self._sound_manager
 
     def run(self) -> None:
         """Запускает главный игровой цикл."""
@@ -60,6 +69,9 @@ class GameLoop:
     def _handle_events(self) -> None:
         """Обрабатывает все события pygame."""
         for event in pygame.event.get():
+            if self._sound_manager.handle_music_event(event):
+                continue
+
             if event.type == pygame.QUIT:
                 save_game(self._game_state)
                 self._running = False
@@ -83,14 +95,19 @@ class GameLoop:
         Renderer.draw_all_nodes(screen, nodes, camera)
         Renderer.draw_traverser_nodes(screen, traversers, camera)
 
-        toolbar = self._game_state.toolbar
-        toolbar.update(screen)
-        toolbar.draw(screen, self._game_state.balance.balance)
-        self._balance_display.draw(screen, self._game_state.balance)
+        linking_node = self._game_state.left_panel.linking_node
+        Renderer.draw_linking_guide(screen, linking_node, camera)
 
-        traverser_shop = self._game_state.traverser_shop
-        traverser_shop.draw(
+        left_panel = self._game_state.left_panel
+        left_panel.update()
+        left_panel.draw(
             screen,
             self._game_state.traverser_manager,
             self._game_state.balance,
         )
+        left_panel.draw_toggle_button(screen)
+
+        toolbar = self._game_state.toolbar
+        toolbar.update(screen)
+        toolbar.draw(screen, self._game_state.balance.balance)
+        self._balance_display.draw(screen, self._game_state.balance)

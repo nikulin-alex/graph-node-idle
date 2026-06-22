@@ -2,43 +2,51 @@
 Единый источник истины для всех текущих игровых данных.
 """
 
+from typing import Optional
+from ui import ToolBar, TraverserShop, LeftPanel
 from models import GraphNode, Balance, TraverserManager
 from core import Camera
-from ui import ToolBar, TraverserShop
 from config import INITIAL_BALANCE
+from utils import SoundManager
 
 
 class GameState:
     """
-    Состояние игры: узлы, баланс, камера, обходчики, магазин.
+    Состояние игры: узлы, баланс, камера, обходчики, магазин, панели.
 
     Attributes:
         nodes: Список всех узлов графа.
         balance: Баланс игрока.
         camera: Камера для преобразования координат.
         traverser_manager: Менеджер обходчиков.
-        toolbar: Панель инструментов для работы с узлами.
+        toolbar: Правая панель инструментов для работы с узлами.
         traverser_shop: Магазин обходчиков.
+        left_panel: Левая выезжающая панель с вкладками.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, sound_manager: Optional[SoundManager] = None) -> None:
         start_node: GraphNode = GraphNode((100, 100))
         self._nodes: list[GraphNode] = [start_node]
         self._balance: Balance = Balance(initial_balance=INITIAL_BALANCE)
         self._camera: Camera = Camera()
         self._traverser_manager: TraverserManager = TraverserManager(start_node)
-        self._toolbar: ToolBar = ToolBar()
-        self._traverser_shop: TraverserShop = TraverserShop()
+        self._toolbar: ToolBar = ToolBar(sound_manager=sound_manager)
+        self._left_panel: LeftPanel = LeftPanel(sound_manager)
 
     @property
     def toolbar(self) -> ToolBar:
-        """Панель инструментов."""
+        """Правая панель инструментов."""
         return self._toolbar
 
     @property
     def traverser_shop(self) -> TraverserShop:
         """Магазин обходчиков."""
-        return self._traverser_shop
+        return self._left_panel._traverser_shop
+
+    @property
+    def left_panel(self) -> LeftPanel:
+        """Левая выезжающая панель."""
+        return self._left_panel
 
     @property
     def nodes(self) -> list[GraphNode]:

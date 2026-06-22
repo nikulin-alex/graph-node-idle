@@ -1,10 +1,10 @@
 """Отображение баланса игрока на экране и кнопка магазина обходчиков."""
 
 import pygame
-from typing import Optional
 
 from models import Balance
 from config import (
+    FONT_PATH,
     BALANCE_FONT,
     BALANCE_HEIGHT,
     BALANCE_WIDTH,
@@ -15,15 +15,10 @@ from utils import format_number, get_image, image_cache
 
 
 class BalanceDisplay:
-    """Отрисовывает баланс, доход и кнопку магазина обходчиков.
-
-    Attributes:
-        shop_button_rect: Прямоугольник кнопки магазина (для проверки кликов).
-    """
+    """Отрисовывает баланс и доход игрока."""
 
     def __init__(self) -> None:
-        self._font: pygame.font.Font = pygame.font.Font(None, BALANCE_FONT)
-        self._shop_font: pygame.font.Font = pygame.font.Font(None, 24)
+        self._font: pygame.font.Font = pygame.font.Font(FONT_PATH, BALANCE_FONT)
         self._image = get_image(image_cache, BALANCE_IMG)
         self._cached_bg = None
         self._cached_balance_text = None
@@ -32,15 +27,9 @@ class BalanceDisplay:
         self._last_income = None
         self._last_screen_w = None
         self._last_screen_h = None
-        self._shop_button_rect: Optional[pygame.Rect] = None
-
-    @property
-    def shop_button_rect(self) -> Optional[pygame.Rect]:
-        """Прямоугольник кнопки магазина обходчиков."""
-        return self._shop_button_rect
 
     def draw(self, screen: pygame.Surface, balance: Balance) -> None:
-        """Отрисовывает баланс, доход и кнопку магазина.
+        """Отрисовывает баланс и доход.
 
         Args:
             screen: Поверхность для отрисовки.
@@ -84,13 +73,3 @@ class BalanceDisplay:
         screen.blit(self._cached_bg, bg_rect)
         screen.blit(self._cached_balance_text, balance_rect)
         screen.blit(self._cached_income_text, income_rect)
-
-        btn_w, btn_h = 160, 40
-        btn_x = bg_rect.left - btn_w - 10
-        btn_y = bg_rect.centery - btn_h // 2
-        self._shop_button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
-
-        pygame.draw.rect(screen, (50, 120, 50), self._shop_button_rect, border_radius=8)
-        btn_text = self._shop_font.render("Магазин обходч.", True, (255, 255, 255))
-        btn_text_rect = btn_text.get_rect(center=self._shop_button_rect.center)
-        screen.blit(btn_text, btn_text_rect)

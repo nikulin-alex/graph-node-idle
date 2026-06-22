@@ -7,8 +7,14 @@
 import pygame
 from typing import Optional
 
+from config import (
+    FONT_PATH,
+    FONT_SIZE_SHOP,
+    FONT_SIZE_SHOP_TITLE,
+    FONT_SIZE_SHOP_PRICE,
+)
 from models import TraverserManager, Balance
-from utils import format_number
+from utils import format_number, SoundManager
 
 
 class TraverserShop:
@@ -18,14 +24,15 @@ class TraverserShop:
         is_open: Открыто ли окно магазина.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, soundmanager) -> None:
         self._is_open: bool = False
-        self._font: pygame.font.Font = pygame.font.Font(None, 36)
-        self._title_font: pygame.font.Font = pygame.font.Font(None, 48)
-        self._price_font: pygame.font.Font = pygame.font.Font(None, 28)
+        self._font: pygame.font.Font = pygame.font.Font(FONT_PATH, FONT_SIZE_SHOP)
+        self._title_font: pygame.font.Font = pygame.font.Font(FONT_PATH, FONT_SIZE_SHOP_TITLE)
+        self._price_font: pygame.font.Font = pygame.font.Font(FONT_PATH, FONT_SIZE_SHOP_PRICE)
         self._panel_rect: Optional[pygame.Rect] = None
         self._buttons: list[dict] = []
         self._overlay_cache: dict = {}
+        self._sound_manager: Optional[SoundManager] = soundmanager
 
     @property
     def is_open(self) -> bool:
@@ -121,13 +128,7 @@ class TraverserShop:
     def draw(
         self, screen: pygame.Surface, manager: TraverserManager, balance: Balance
     ) -> None:
-        """Отрисовывает окно магазина.
-
-        Args:
-            screen: Поверхность для отрисовки.
-            manager: Менеджер обходчиков.
-            balance: Баланс игрока.
-        """
+        """Отрисовывает окно магазина как модальное (на весь экран)."""
         if not self._is_open:
             return
 
@@ -137,13 +138,11 @@ class TraverserShop:
 
         self._create_buttons(screen, manager)
 
-        # Фон панели
         pygame.draw.rect(screen, (30, 30, 60), self._panel_rect, border_radius=15)
         pygame.draw.rect(
             screen, (100, 100, 200), self._panel_rect, width=3, border_radius=15
         )
 
-        # Заголовок
         title_surf = self._title_font.render(
             "Магазин обходчиков", True, (255, 255, 255)
         )
@@ -152,7 +151,28 @@ class TraverserShop:
         )
         screen.blit(title_surf, title_rect)
 
-        # Кнопки
+        self._draw_shop_buttons(screen, balance)
+
+    def draw_in_panel(
+        self,
+        screen: pygame.Surface,
+        panel_rect: pygame.Rect,
+        manager: TraverserManager,
+        balance: Balance,
+    ) -> None:
+        """Отрисовывает содержимое магазина внутри заданного прямоугольника.
+
+        Args:
+            screen: Поверхность для отрисовки.
+            panel_rect: Прямоугольник области, в которой рисовать магазин.
+            manager: Менеджер обходчиков.
+            balance: Баланс игрока.
+        """
+        self._create_buttons_in_rect(panel_rect, manager)
+        self._draw_shop_buttons(screen, balance)
+
+    def _draw_shop_buttons(self, screen: pygame.Surface, balance: Balance) -> None:
+        """Отрисовывает кнопки магазина (общая логика для draw и draw_in_panel)."""
         for btn in self._buttons:
             if btn["mode"] == "close":
                 color = (150, 50, 50)
@@ -165,12 +185,10 @@ class TraverserShop:
 
             pygame.draw.rect(screen, color, btn["rect"], border_radius=10)
 
-            # Текст кнопки
             text_surf = self._font.render(btn["text"], True, (255, 255, 255))
             text_rect = text_surf.get_rect(center=btn["rect"].center)
             screen.blit(text_surf, text_rect)
 
-            # Цена (для BFS/DFS)
             if btn["price"] is not None:
                 price_surf = self._price_font.render(
                     f'Цена: {format_number(btn["price"])}', True, (200, 200, 100)
@@ -180,22 +198,84 @@ class TraverserShop:
                 )
                 screen.blit(price_surf, price_rect)
 
+    def _create_buttons_in_rect(
+        self, panel_rect: pygame.Rect, manager: TraverserManager
+    ) -> None:
+        """Создаёт кнопки магазина внутри заданного прямоугольника."""
+        self._buttons = []
+        self._panel_rect = panel_rect
+
+        price = manager.get_traverser_price()
+
+        btn_margin = 20
+        btn_height = 80
+        btn_width = panel_rect.width - btn_margin * 2
+
+        bfs_btn_rect = pygame.Rect(
+            panel_rect.left + btn_margin,
+            panel_rect.top + 20,
+            btn_width,
+            btn_height,
+        )
+        self._buttons.append(
+            {
+                "rect": bfs_btn_rect,
+                "mode": "bfs",
+                "text": "Купить BFS обходчика",
+                "price": price,
+            }
+        )
+
+        dfs_btn_rect = pygame.Rect(
+            panel_rect.left + btn_margin,
+            panel_rect.top + 20 + btn_height + 15,
+            btn_width,
+            btn_height,
+        )
+        self._buttons.append(
+            {
+                "rect": dfs_btn_rect,
+                "mode": "dfs",
+                "text": "Купить DFS обходчика",
+                "price": price,
+            }
+        )
+
     def handle_click(
         self, mouse_pos: tuple, manager: TraverserManager, balance: Balance
     ) -> bool:
-        """Обрабатывает клик по кнопкам магазина.
+        """Обрабатывает клик по кнопкам магазина (модальный режим)."""
+        if not self._is_open:
+            return False
+        return self._process_button_click(mouse_pos, manager, balance)
+
+    def handle_click_in_panel(
+        self,
+        mouse_pos: tuple,
+        panel_rect: pygame.Rect,
+        manager: TraverserManager,
+        balance: Balance,
+    ) -> bool:
+        """Обрабатывает клик по кнопкам магазина внутри панели.
 
         Args:
             mouse_pos: Позиция мыши.
+            panel_rect: Прямоугольник области панели.
             manager: Менеджер обходчиков.
             balance: Баланс игрока.
 
         Returns:
-            True если клик был обработан (по любой кнопке).
+            True если клик был обработан.
         """
-        if not self._is_open:
-            return False
+        return self._process_button_click(mouse_pos, manager, balance)
 
+    def _process_button_click(
+        self,
+        mouse_pos: tuple,
+        manager: TraverserManager,
+        balance: Balance,
+    ) -> bool:
+        """Общая логика обработки клика по кнопкам магазина."""
         for btn in self._buttons:
             if btn["rect"].collidepoint(mouse_pos):
                 if btn["mode"] == "close":
@@ -204,8 +284,9 @@ class TraverserShop:
                 elif btn["price"] is not None and balance.balance >= btn["price"]:
                     balance.balance -= btn["price"]
                     manager.add_traverser(btn["mode"])
+                    self._sound_manager.play_upgrade()
                     return True
                 elif btn["price"] is not None:
-                    # Недостаточно средств — всё равно считаем клик обработанным
+                    self._sound_manager.play_click_error()
                     return True
         return False
